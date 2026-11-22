@@ -1,6 +1,8 @@
+-- Example Startup
 local hfs = require "horvenfs"
 
 if not fs.exists("test") then
+  -- Builds a partition of your entire file system
   hfs.buildPartition("test")
   hfs.mountPartition("test","a")
   hfs.fs.clone(".","a")
