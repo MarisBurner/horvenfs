@@ -564,7 +564,9 @@ local function getPath(path)
       return nil
     end
   end
-  return r[nm]
+  if type(r) == "table" then
+    return r[nm]
+  end
 end
 
 local function pathExists(path)
@@ -803,10 +805,12 @@ end
 lib.fs = {} -- Library for interacting with the builtin FS
 
 function lib.fs.clone(path,opath)
-  -- Clones file from FS and puts it into HFS
+  -- Clones path from FS and puts it into HFS
   assert(fs.exists(path),"Cannot clone path, doesn't exist")
   assert(getPath(opath) ~= heir,"Cannot edit directly on the heirarchy, must choose partition")
+  lib.delete(opath)
   if fs.isDir(path) then
+    lib.mkdir(opath)
     for _, k in ipairs(fs.list(path)) do
       lib.fs.clone(fs.combine(path,k),fs.combine(opath,k))
     end
@@ -818,9 +822,11 @@ function lib.fs.clone(path,opath)
 end
 
 function lib.fs.grab(path,opath)
-  -- Grabs file from HFS and puts it into FS
+  -- Grabs path from HFS and puts it into FS
   assert(lib.exists(path),"Cannot grab path, doesn't exist")
+  fs.delete(opath)
   if lib.isDir(path) then
+    fs.mkdir(opath)
     for _, k in ipairs(lib.list(path)) do
       lib.fs.grab(fs.combine(path,k),fs.combine(opath,k))
     end
