@@ -572,17 +572,6 @@ local function pathExists(path)
   return type(p) ~= "nil"
 end
 
-local function deletePath(path)
-  path = fs.combine(path) -- Sanitize to Absolute Path
-  local p = getPath(fs.getDir(path))
-  if p == heir or type(p) ~= "table" then
-    return false
-  else
-    p[fs.getName(path)] = nil
-    return true
-  end
-end
-
 local function isPartition(path)
   return fs.getDir(path) == ""
 end
@@ -706,6 +695,28 @@ local function deleteBlock(path)
   fs.delete(bpath)
 end
 
+local function deletePath(path)
+  path = fs.combine(path) -- Sanitize to Absolute Path
+  local p = getPath(fs.getDir(path))
+  if type(p) ~= "table" then
+    return false
+  else
+    local nm = fs.getName(path)
+    local d = p[nm]
+    if type(d) == "table" then
+      for k, _ in pairs(d) do
+        deletePath(fs.combine(path,k))
+      end
+    else
+      deleteBlock(path)
+    end
+    if p ~= heir then
+      p[nm] = nil
+    end
+    return true
+  end
+end
+
 local function writeBlock(path,data)
   local npath, bid, bpath = getBlockData(path)
   writeCompFile(bpath,data)
@@ -726,10 +737,6 @@ function lib.delete(path)
   local isDir = lib.isDir(path)
   local suc = deletePath(path)
   if suc then
-    if not isDir then
-      -- Clear Block
-      deleteBlock(path)
-    end
     lib.updateHeir(pathPartition(path))
   end
   return suc
@@ -782,6 +789,7 @@ function lib.list(path,abs)
   local dir = getPath(path)
   if type(dir) == "table" then
     local ht = tableKeys(dir)
+    table.sort(ht)
     if abs then
       local full = fs.getDir(path)
       return tableMap(ht,function(p)
@@ -794,8 +802,32 @@ end
 
 lib.fs = {} -- Library for interacting with the builtin FS
 
-function lib.fs.cloneHFS(dir,part)
-  local function c(a,d)
+function lib.fs.clone(path,opath)
+  -- Clones file from FS and puts it into HFS
+  assert(fs.exists(path),"Cannot clone path, doesn't exist")
+  assert(getPath(opath) ~= heir,"Cannot edit directly on the heirarchy, must choose partition")
+  if fs.isDir(path) then
+    for _, k in ipairs(fs.list(path)) do
+      lib.fs.clone(fs.combine(path,k),fs.combine(opath,k))
+    end
+  else
+    local fl = lib.open(opath,"w")
+    fl.write(readFile(path))
+    fl.close()
+  end
+end
+
+function lib.fs.grab(path,opath)
+  -- Grabs file from HFS and puts it into FS
+  assert(lib.exists(path),"Cannot grab path, doesn't exist")
+  if lib.isDir(path) then
+    for _, k in ipairs(lib.list(path)) do
+      lib.fs.grab(fs.combine(path,k),fs.combine(opath,k))
+    end
+  else
+    local fl = lib.open(path,"r")
+    writeFile(opath,fl.readAll())
+    fl.close()
   end
 end
 
@@ -804,10 +836,7 @@ if not isRequired() then
 
   if c == "build" then
     lib.buildPartition(fs.combine(shell.resolve("."), args[2]), args[3])
-  elseif c == "clonefs" then
-    lib.buildPartition(fs.combine(shell.resolve("."), args[3]))
-    lib.mountPartition(fs.combine(shell.resolve("."), args[3]),"d")
-    lib.fs.cloneHFS(fs.combine(shell.resolve("."), args[2]),"d")
+    print(string.format("Built Partition '%s' in '%s'", args[3] or args[2], fs.combine(shell.resolve("."), args[2])))
   else
     error(string.format("Unrecognized HFS Command: '%s'", c),0)
   end

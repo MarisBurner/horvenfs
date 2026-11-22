@@ -10,8 +10,8 @@ local function writeFile(path,data)
   fl.close()
 end
 
-writeFile("a/test.txt","Hello, World!")
-writeFile("a/program.lua","")
+hfs.delete("a")
+hfs.fs.clone(".","a")
 
-print( table.concat(hfs.list()) )
-print( table.concat(hfs.list("a"),", ") )
+print( table.concat(hfs.list(), ", ") )
+print( table.concat(hfs.list("a"), ", ") )
