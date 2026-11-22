@@ -794,9 +794,8 @@ function lib.list(path,abs)
     local ht = tableKeys(dir)
     table.sort(ht)
     if abs then
-      local full = fs.getDir(path)
-      return tableMap(ht,function(p)
-        return fs.combine(full,p)
+      ht = tableMap(ht,function(p)
+        return fs.combine(path,p)
       end)
     end
     return ht
@@ -857,15 +856,33 @@ if not isRequired() then
   elseif c == "clear" then
     lib.mountPartition(fs.combine(shell.resolve("."), args[2]),"a")
     lib.delete("a")
-    print(string.format("Cleared Partition '%s'",parts["a"]))
+    print(string.format("[%s] Cleared Partition",args[2]))
+  elseif c == "rm" then
+    lib.mountPartition(fs.combine(shell.resolve("."), args[2]),"a")
+    lib.delete(fs.combine("a", args[3]))
+    print(string.format("[%s] Removed path '%s'",args[2],args[3]))
+  elseif c == "mkdir" then
+    lib.mountPartition(fs.combine(shell.resolve("."), args[2]),"a")
+    lib.mkdir(fs.combine("a", args[3]))
+    print(string.format("[%s] Created dir '%s'",args[2],args[3]))
   elseif c == "ls" then
     lib.mountPartition(fs.combine(shell.resolve("."), args[2]),"temp")
-    print(lib.list(fs.combine("temp",args[3])))
+    print(table.concat(lib.list(fs.combine("temp",args[3] or "."))," "))
   elseif c == "cat" then
     lib.mountPartition(fs.combine(shell.resolve("."), args[2]),"temp")
     local fl = lib.open(fs.combine("temp",args[3]),"r")
     print(fl.readAll())
     fl.close()
+  elseif c == "grab" then
+    lib.mountPartition(fs.combine(shell.resolve("."), args[2]),"temp")
+    local ipath, opath = fs.combine("temp",args[3]),fs.combine(shell.resolve("."),args[4])
+    local fl = lib.fs.grab(ipath, opath)
+    print(string.format("[%s] Grabbed File from HFS '%s' into FS '%s'",args[2],args[3],args[4]))
+  elseif c == "clone" then
+    lib.mountPartition(fs.combine(shell.resolve("."), args[3]),"temp")
+    local ipath, opath = fs.combine(shell.resolve("."),args[2]),fs.combine("temp",args[4])
+    local fl = lib.fs.clone(ipath,opath)
+    print(string.format("[%s] Cloned File from FS '%s' into HFS '%s'",args[3],args[2],args[4]))
   else
     error(string.format("Unrecognized HFS Command: '%s'", c),0)
   end
