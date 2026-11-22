@@ -42,7 +42,7 @@ Q: Does it support multi-disk filesystems?
 
 Q: Does it take advantage of any RCC modpack functions such as the Cryptographic Accelerator?
 
-**A: Not in the current release. I first had the intention of implementing builtin encryption to the file system and its blocks, but that might be for a future release. It's not currently included. The compression algorithm, however, comes packaged with the API, so need for any outside peripherals.**
+**A: Not in the current release. I first had the intention of implementing builtin encryption to the file system and its blocks, but that might be for a future release. It's not currently included. The compression algorithm, however, comes packaged with the API, so no need for any outside peripherals.**
 
 Q: How similar is the VFS layer to the normal FS API?
 
