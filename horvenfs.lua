@@ -3,6 +3,7 @@
 
 local args = { ... }
 local lib = {}
+lib.version = 0
 
 local function isRequired()
   local level = 2
@@ -625,7 +626,7 @@ function lib.buildPartition(dir, name)
 
   fs.makeDir(dir)
   writeFile(fs.combine(dir, ".hfs"), {
-    vers = 1,
+    vers = lib.version,
     name = tostring(name or fs.getName(dir))
   }) -- Metadata
   writeCompFile(fs.combine(dir, ".heir"), {}) -- FS Heirarchy
@@ -806,13 +807,20 @@ lib.fs = {} -- Library for interacting with the builtin FS
 
 function lib.fs.clone(path,opath)
   -- Clones path from FS and puts it into HFS
+  path, opath = fs.combine(path), fs.combine(opath) -- Sanitize paths
   assert(fs.exists(path),"Cannot clone path, doesn't exist")
   assert(getPath(opath) ~= heir,"Cannot edit directly on the heirarchy, must choose partition")
+  local pdir = path
+  if parts[pathPartition(opath)] == pdir or pdir == "rom" then
+    -- Dismiss directly copying these directories (Rom & Current Partition Data)
+    return false
+  end
   lib.delete(opath)
   if fs.isDir(path) then
     lib.mkdir(opath)
     for _, k in ipairs(fs.list(path)) do
       lib.fs.clone(fs.combine(path,k),fs.combine(opath,k))
+      sleep(0) -- Yield
     end
   else
     local fl = lib.open(opath,"w")
@@ -823,18 +831,21 @@ end
 
 function lib.fs.grab(path,opath)
   -- Grabs path from HFS and puts it into FS
+  path, opath = fs.combine(path), fs.combine(opath) -- Sanitize paths
   assert(lib.exists(path),"Cannot grab path, doesn't exist")
   fs.delete(opath)
   if lib.isDir(path) then
     fs.mkdir(opath)
     for _, k in ipairs(lib.list(path)) do
       lib.fs.grab(fs.combine(path,k),fs.combine(opath,k))
+      sleep(0) -- Yield
     end
   else
     local fl = lib.open(path,"r")
     writeFile(opath,fl.readAll())
     fl.close()
   end
+  return true
 end
 
 if not isRequired() then
@@ -843,6 +854,18 @@ if not isRequired() then
   if c == "build" then
     lib.buildPartition(fs.combine(shell.resolve("."), args[2]), args[3])
     print(string.format("Built Partition '%s' in '%s'", args[3] or args[2], fs.combine(shell.resolve("."), args[2])))
+  elseif c == "clear" then
+    lib.mountPartition(fs.combine(shell.resolve("."), args[2]),"a")
+    lib.delete("a")
+    print(string.format("Cleared Partition '%s'",parts["a"]))
+  elseif c == "ls" then
+    lib.mountPartition(fs.combine(shell.resolve("."), args[2]),"temp")
+    print(lib.list(fs.combine("temp",args[3])))
+  elseif c == "cat" then
+    lib.mountPartition(fs.combine(shell.resolve("."), args[2]),"temp")
+    local fl = lib.open(fs.combine("temp",args[3]),"r")
+    print(fl.readAll())
+    fl.close()
   else
     error(string.format("Unrecognized HFS Command: '%s'", c),0)
   end

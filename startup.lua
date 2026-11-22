@@ -1,17 +1,16 @@
 local hfs = require "horvenfs"
-hfs.mountPartition("test","a")
+
+if not fs.exists("test") then
+  hfs.buildPartition("test")
+  hfs.mountPartition("test","a")
+  hfs.fs.clone(".","a")
+else
+  hfs.mountPartition("test","a")
+end
 
 term.clear()
 term.setCursorPos(1,1)
-
-local function writeFile(path,data)
-  local fl = hfs.open(path,"w")
-  fl.write(data)
-  fl.close()
-end
-
-hfs.delete("a")
-hfs.fs.clone(".","a")
-
-print( table.concat(hfs.list(), ", ") )
+term.setTextColor(colors.blue)
+print( string.format("Mounted Partitions: %s", table.concat(hfs.list(), ", ")) )
+term.setTextColor(colors.white)
 print( table.concat(hfs.list("a"), ", ") )
