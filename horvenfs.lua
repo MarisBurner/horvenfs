@@ -294,11 +294,11 @@ end
 
 local function pathTable(path)
   -- Turn Path into table to traceback
-  path = fs.combine(path)
+  local npath = fs.combine(path)
   local r = {}
-  while fs.getName(path) ~= "" do
-    r[#r+1] = fs.getName(path)
-    path = fs.combine(path,".")
+  while fs.getName(npath) ~= "" do
+    r[#r+1] = fs.getName(npath)
+    npath = fs.getDir(npath)
   end
   return reverseTable(r)
 end
