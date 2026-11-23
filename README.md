@@ -3,9 +3,14 @@
 It's a virtual file system format made to compress large directories and files in ComputerCraft.
 
 ## Quick Start
+Install horvenfs using this command
+```
+wget https://raw.githubusercontent.com/MarisBurner/horvenfs/main/horvenfs.lua /horvenfs.lua
+```
+
 After you've installed the **horvenfs.lua** file into your root directory, you can start building a partition.
 
-You can type this command:
+Type this command to build an HFS partition:
 ```
 horvenfs build <your partition directory> [optional partition meta name]
 ```
