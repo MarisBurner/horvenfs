@@ -1,6 +1,6 @@
 # HorvenFS
 ### What is HorvenFS?
-It's a virtual file system made to compress large directories and files in ComputerCraft.
+It's a virtual file system format made to compress large directories and files in ComputerCraft.
 
 ## Quick Start
 After you've installed the **horvenfs.lua** file into your root directory, you can start building a partition.
@@ -15,6 +15,10 @@ Other useful commands to use:
 horvenfs clear <partition directory>
 horvenfs ls <partition directory> <path in partition>
 horvenfs cat <partition directory> <path in partition>
+horvenfs rm <partition directory> <path in partition>
+horvenfs clear <partition directory>
+horvenfs grab <partition directory> <path in partition> <output fs path>
+horvenfs clone <parent fs path> <partition directory> <path in partition>
 ```
 
 ## Example Program
@@ -34,11 +38,32 @@ hfs.fs.grab("p1/test.txt","test.txt") -- This function grabs something from HFS 
 ### Q/A
 Q: If I have a lot of small files, will the file system still be able to compress it?
 
-**A: No, the compression algorithm works only on blocks of data instead of the entirety of the file system. On smaller files with less data to compress, it might add a small bloat of 3 bytes due to the algorithm trying to compress it but not having enough information to compress.**
+**A: Yes! The new algorithm uses 3 times LZ77/Huffman compression. It reduces even relatively small high-entropy files down by 16% (Via recent benchmark).**
+
+```
+= FILE COPYING =
+Sizes:
+High = 1MB | Mid = 100KB | Low = 5KB
+
+FS AVG Time (seconds)
+High - 0.00611
+Mid - 0.00154
+Low - 0.000701
+
+HFS AVG Time (seconds)
+High - 3.952
+Mid - 0.43868
+Low - 0.09
+
+HFS Size Ratio Diff (Compressed/Uncompressed - 100%)
+High - -17.873%
+Mid - -17.898%
+Low - -16.67578%
+```
 
 Q: Does it support multi-disk filesystems?
 
-**A: Technically, Yes. Whenever you mount a file system, it turns it into a partition directory in the API's Heirarchy. You can have multiple disks which have a unique partition directory in that heirarchy and name them whatever you want. The only limitation is that the block ID's (The ID the VFS uses to find the blocks) are tied to the partition directory. You can't mount two disks into the same partition directory, and you can't reference blocks from outside partitions from one partition.**
+**A: Technically, Yes. Whenever you mount a file system, it turns it into a partition directory in the API's heirarchy. You can have multiple disks which have a unique partition directory in that heirarchy and name them whatever you want. The only limitation is that the block ID's (The ID the VFS uses to find the blocks) are tied to the partition directory. You can't mount two disks into the same partition directory, and you can't reference blocks from outside partitions in a partition.**
 
 Q: Does it take advantage of any RCC modpack functions such as the Cryptographic Accelerator?
 
@@ -46,4 +71,4 @@ Q: Does it take advantage of any RCC modpack functions such as the Cryptographic
 
 Q: How similar is the VFS layer to the normal FS API?
 
-**A: They share a lot of similarities. The only things I did not end up finishing in the current release are wildcard paths (i.e. /rom/\*). That's for a future update. Everything else though, such as delete, list, mkdir, open, and exists function as normal.**
+**A: They share a lot of similarities. One big thing I did not end up finishing in the current release are wildcard paths (i.e. /rom/\*). That's for a future update. Everything else though, such as delete, list, makeDir, open, and exists function as normal with some slight limitations. For now, it's about 75% parity.**
