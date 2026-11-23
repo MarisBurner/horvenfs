@@ -3,7 +3,7 @@
 
 local args = { ... }
 local lib = {}
-lib.version = 0
+lib.version = 1
 
 local function isRequired()
   local level = 2
@@ -16,6 +16,14 @@ local function isRequired()
     level = level + 1
   end
   return false
+end
+
+local function tableFlip(tbl)
+  local r = {}
+  for k, v in pairs(tbl) do
+    r[v] = k
+  end
+  return r
 end
 
 local function tableKeys(tbl)
@@ -767,7 +775,7 @@ end
 lib.compressor = buildCompressor() -- compressor.encode, compressor.decode
 lib.sha256 = buildHasher()
 
-local parts = {} -- Partition Paths
+local parts = {} -- Partition Data
 local heir = {}  -- Filesystem Heirarchy
 
 local function reverseTable(t)
@@ -883,6 +891,10 @@ function lib.isHFS(dir)
       fs.exists(fs.combine(dir, ".blks"))
 end
 
+function lib.getHFSMeta(dir)
+  return readFileT(fs.combine(dir,".hfs"))
+end
+
 function lib.mountPartition(dir, name)
   -- Add FileSystem Heirarchy to Heirarchy
   assert(lib.isHFS(dir), "Directory is not an HFS partition")
@@ -897,7 +909,8 @@ function lib.mountPartition(dir, name)
     end
   end
   heir[name] = readCompFileT(fs.combine(dir, ".heir"))
-  parts[name] = dir
+  parts[name] = {path=dir, meta=lib.getHFSMeta(dir)}
+  return name
 end
 
 function lib.unmount(name)
@@ -907,8 +920,12 @@ end
 
 function lib.updateHeir(name)
   if heir[name] then
-    writeCompFile(fs.combine(parts[name], ".heir"), heir[name])
+    writeCompFile(fs.combine(parts[name].path, ".heir"), heir[name])
   end
+end
+
+function lib.getPartitionPath(name)
+  return parts[name].path
 end
 
 function lib.isDir(path)
@@ -921,13 +938,14 @@ function lib.exists(path)
   return type(d) ~= "nil"
 end
 
-function lib.mkdir(path)
+function lib.makeDir(path)
   local suc = writePath(path, {})
   if suc then
     lib.updateHeir(pathPartition(path))
   end
   return suc
 end
+lib.mkdir = lib.makeDir -- Deprecated but still supported
 
 local function getBlockData(path)
   -- Returns block data
@@ -936,7 +954,7 @@ local function getBlockData(path)
   assert(lib.isDir(fs.getDir(path)), "Block must exist in directory", 0)
   local bid = lib.sha256(pathRemoveFirst(path))
   -- Clean Path, Block ID, Block Path
-  return path, bid, fs.combine(parts[pathPartition(path)], ".blks", bid)
+  return path, bid, fs.combine(parts[pathPartition(path)].path, ".blks", bid)
 end
 
 local function deleteBlock(path)
@@ -1048,6 +1066,52 @@ function lib.list(path, abs)
   end
 end
 
+function lib.fix(path)
+  -- Fix File System (Clear out Zombie Blocks, remove broken paths)
+  local suc, res = pcall(function()
+    return lib.mountPartition(path)
+  end)
+  if not suc then
+    -- Unsaveable loss, try to recover metadata and clean it out
+    if lib.isHFS(path) then
+      local meta = lib.getHFSMeta(path)
+      fs.delete(path)
+      lib.buildPartition(path,meta.name)
+      return "Gutted Unsaveable Partition"
+    end
+    return "Missing Meta Data (Cannot Restore Partition)"
+  end
+  local mpath = res
+
+  local areg = tableFlip(fs.list(fs.combine(parts[mpath].path,".blks")))
+  local kreg = tableMap(areg, function(x) return x; end) -- Just copy the registry
+  local dpaths = 0
+
+  local function checkDir(dir)
+    for k, v in pairs(dir) do
+      if type(v) == "table" then
+        checkDir(v)
+      else
+        if areg[v] then
+          -- Block exists for this path, remove from kill registry
+          kreg[v] = nil
+        else
+          -- Block doesn't exist for this path, kill it
+          dir[k] = nil
+          dpaths = dpaths + 1
+        end
+      end
+    end
+  end
+  checkDir(heir[mpath])
+
+  for _, x in ipairs(kreg) do fs.delete(fs.combine(parts[mpath].path,".blks",x)) end -- Kill registry clear
+  
+  lib.updateHeir(mpath)
+  lib.unmount(mpath)
+  return string.format("Cleared %s Zombies,  Removed %s Dead Files",#kreg,dpaths)
+end
+
 lib.fs = {} -- Library for interacting with the builtin FS
 
 function lib.fs.clone(path, opath)
@@ -1056,7 +1120,7 @@ function lib.fs.clone(path, opath)
   assert(fs.exists(path), "Cannot clone path, doesn't exist")
   assert(getPath(opath) ~= heir, "Cannot edit directly on the heirarchy, must choose partition")
   local pdir = path
-  if parts[pathPartition(opath)] == pdir or pdir == "rom" then
+  if parts[pathPartition(opath)].path == pdir or pdir == "rom" then
     -- Dismiss directly copying these directories (Rom & Current Partition Data)
     return false
   end
@@ -1114,6 +1178,9 @@ if not isRequired() then
   elseif c == "ls" then
     lib.mountPartition(fs.combine(shell.resolve("."), args[2]), "temp")
     print(table.concat(lib.list(fs.combine("temp", args[3] or ".")), " "))
+  elseif c == "fix" then
+    local rs = lib.fix(fs.combine(shell.resolve("."),args[2]))
+    print(string.format("[%s] Fixed Partition Successfully: %s", args[2],rs))
   elseif c == "cat" then
     lib.mountPartition(fs.combine(shell.resolve("."), args[2]), "temp")
     local fl = lib.open(fs.combine("temp", args[3]), "r")
