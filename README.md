@@ -3,6 +3,7 @@
 It's a virtual file system format made to compress large directories and files in ComputerCraft.
 
 ## Quick Start
+
 Install horvenfs using this command
 ```
 wget https://raw.githubusercontent.com/MarisBurner/horvenfs/main/horvenfs.lua /horvenfs.lua
@@ -15,16 +16,7 @@ Type this command to build an HVFS partition:
 horvenfs build <your partition directory> [optional partition meta name]
 ```
 
-Other useful commands to use:
-```
-horvenfs clear <partition directory>
-horvenfs ls <partition directory> <path in partition>
-horvenfs cat <partition directory> <path in partition>
-horvenfs rm <partition directory> <path in partition>
-horvenfs clear <partition directory>
-horvenfs grab <partition directory> <path in partition> <output fs path>
-horvenfs clone <parent fs path> <partition directory> <path in partition>
-```
+To learn more, check out the [Documentation](https://github.com/MarisBurner/horvenfs/wiki/)
 
 ## Example Program
 A quick example of mounting a partition and writing to a file
