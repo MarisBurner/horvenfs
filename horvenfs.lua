@@ -874,11 +874,11 @@ local function setPath(path, data)
 end
 
 function lib.buildPartition(dir, name)
-  -- Sets up a new hfs partition directory
+  -- Sets up a new hvfs partition directory
   assert(not fs.exists(dir), "Trying to build new partition on existing path")
 
   fs.makeDir(dir)
-  writeFile(fs.combine(dir, ".hfs"), {
+  writeFile(fs.combine(dir, ".hvfs"), {
     vers = lib.version,
     name = tostring(name or fs.getName(dir))
   })                                          -- Metadata
@@ -886,22 +886,21 @@ function lib.buildPartition(dir, name)
   fs.makeDir(fs.combine(dir, ".blks"))        -- Compressed Blocks
 end
 
-function lib.isHFS(dir)
-  return fs.exists(fs.combine(dir, ".hfs")) and fs.exists(fs.combine(dir, ".heir")) and
-      fs.exists(fs.combine(dir, ".blks"))
+function lib.isHVFS(dir)
+  return fs.exists(fs.combine(dir, ".hvfs")) and fs.exists(fs.combine(dir, ".heir")) and fs.exists(fs.combine(dir, ".blks"))
 end
 
-function lib.getHFSMeta(dir)
-  return readFileT(fs.combine(dir,".hfs"))
+function lib.getHVFSMeta(dir)
+  return readFileT(fs.combine(dir,".hvfs"))
 end
 
 function lib.mountPartition(dir, name)
   -- Add FileSystem Heirarchy to Heirarchy
-  assert(lib.isHFS(dir), "Directory is not an HFS partition")
+  assert(lib.isHVFS(dir), "Directory is not an HVFS partition")
   if type(name) == "string" then
     assert(not heir[name], "Overlapping mount paths")
   else
-    name = readFileT(fs.combine(dir, ".hfs")).name
+    name = readFileT(fs.combine(dir, ".hvfs")).name
     local i = 1
     while heir[name] do
       name = string.format("%s%n", name, i)
@@ -909,7 +908,7 @@ function lib.mountPartition(dir, name)
     end
   end
   heir[name] = readCompFileT(fs.combine(dir, ".heir"))
-  parts[name] = {path=dir, meta=lib.getHFSMeta(dir)}
+  parts[name] = {path=dir, meta=lib.getHVFSMeta(dir)}
   return name
 end
 
@@ -1073,8 +1072,8 @@ function lib.fix(path)
   end)
   if not suc then
     -- Unsaveable loss, try to recover metadata and clean it out
-    if lib.isHFS(path) then
-      local meta = lib.getHFSMeta(path)
+    if lib.isHVFS(path) then
+      local meta = lib.getHVFSMeta(path)
       fs.delete(path)
       lib.buildPartition(path,meta.name)
       return "Gutted Unsaveable Partition"
@@ -1115,7 +1114,7 @@ end
 lib.fs = {} -- Library for interacting with the builtin FS
 
 function lib.fs.clone(path, opath)
-  -- Clones path from FS and puts it into HFS
+  -- Clones path from FS and puts it into HVFS
   path, opath = fs.combine(path), fs.combine(opath) -- Sanitize paths
   assert(fs.exists(path), "Cannot clone path, doesn't exist")
   assert(getPath(opath) ~= heir, "Cannot edit directly on the heirarchy, must choose partition")
@@ -1139,7 +1138,7 @@ function lib.fs.clone(path, opath)
 end
 
 function lib.fs.grab(path, opath)
-  -- Grabs path from HFS and puts it into FS
+  -- Grabs path from HVFS and puts it into FS
   path, opath = fs.combine(path), fs.combine(opath) -- Sanitize paths
   assert(lib.exists(path), "Cannot grab path, doesn't exist")
   fs.delete(opath)
@@ -1190,14 +1189,14 @@ if not isRequired() then
     lib.mountPartition(fs.combine(shell.resolve("."), args[2]), "temp")
     local ipath, opath = fs.combine("temp", args[3]), fs.combine(shell.resolve("."), args[4])
     local fl = lib.fs.grab(ipath, opath)
-    print(string.format("[%s] Grabbed File from HFS '%s' into FS '%s'", args[2], args[3], args[4]))
+    print(string.format("[%s] Grabbed File from HVFS '%s' into FS '%s'", args[2], args[3], args[4]))
   elseif c == "clone" then
     lib.mountPartition(fs.combine(shell.resolve("."), args[3]), "temp")
     local ipath, opath = fs.combine(shell.resolve("."), args[2]), fs.combine("temp", args[4])
     local fl = lib.fs.clone(ipath, opath)
-    print(string.format("[%s] Cloned File from FS '%s' into HFS '%s'", args[3], args[2], args[4]))
+    print(string.format("[%s] Cloned File from FS '%s' into HVFS '%s'", args[3], args[2], args[4]))
   else
-    error(string.format("Unrecognized HFS Command: '%s'", c), 0)
+    error(string.format("Unrecognized HVFS Command: '%s'", c), 0)
   end
 end
 

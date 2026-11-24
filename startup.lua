@@ -1,29 +1,29 @@
 -- Example Startup
-local hfs = require "horvenfs"
+local hvfs = require "horvenfs"
 
 if not fs.exists("test") then
   -- Builds a partition of your entire file system
-  hfs.buildPartition("test")
-  hfs.mountPartition("test")
+  hvfs.buildPartition("test")
+  hvfs.mountPartition("test")
   parallel.waitForAny(function()
-    hfs.fs.clone(".","test")
+    hvfs.fs.clone(".","test")
   end,function()
     local t = os.clock()
     while true do
       term.clear()
       term.setCursorPos(1,1)
       term.setTextColor(colors.yellow)
-      print(string.format("Cloning '.' into HFS (Time Elapsed %ss)",os.clock()-t))
+      print(string.format("Cloning '.' into HVFS (Time Elapsed %ss)",os.clock()-t))
       sleep(0)
     end
   end)
 else
-  hfs.mountPartition("test")
+  hvfs.mountPartition("test")
 end
 
 term.clear()
 term.setCursorPos(1,1)
 term.setTextColor(colors.green)
-print( string.format("Mounted Partitions: %s", table.concat(hfs.list(), " ")) )
+print( string.format("Mounted Partitions: %s", table.concat(hvfs.list(), " ")) )
 term.setTextColor(colors.white)
-print( table.concat(hfs.list("test"), " ") )
+print( table.concat(hvfs.list("test"), " ") )

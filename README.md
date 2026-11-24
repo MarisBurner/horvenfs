@@ -10,7 +10,7 @@ wget https://raw.githubusercontent.com/MarisBurner/horvenfs/main/horvenfs.lua /h
 
 After you've installed the **horvenfs.lua** file into your root directory, you can start building a partition.
 
-Type this command to build an HFS partition:
+Type this command to build an HVFS partition:
 ```
 horvenfs build <your partition directory> [optional partition meta name]
 ```
@@ -29,15 +29,15 @@ horvenfs clone <parent fs path> <partition directory> <path in partition>
 ## Example Program
 A quick example of mounting a partition and writing to a file
 ```lua
-local hfs = require "horvenfs"
+local hvfs = require "horvenfs"
 
-hfs.mountPartition("test","p1")
+hvfs.mountPartition("test","p1")
 
-local fl = hfs.open("p1/test.txt","w")
+local fl = hvfs.open("p1/test.txt","w")
 fl.write("Hello World!")
 fl.close()
 
-hfs.fs.grab("p1/test.txt","test.txt") -- This function grabs something from HFS and loads it into the regular FS
+hvfs.fs.grab("p1/test.txt","test.txt") -- This function grabs something from HVFS and loads it into the regular FS
 ```
 
 ### Q/A
@@ -55,12 +55,12 @@ High - 0.00611
 Mid - 0.00154
 Low - 0.000701
 
-HFS AVG Time (seconds)
+HVFS AVG Time (seconds)
 High - 3.952
 Mid - 0.43868
 Low - 0.09
 
-HFS Size Ratio Diff (Compressed/Uncompressed - 100%)
+HVFS Size Ratio Diff (Compressed/Uncompressed - 100%)
 High - -17.873%
 Mid - -17.898%
 Low - -16.67578%
