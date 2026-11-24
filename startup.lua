@@ -3,7 +3,7 @@ local hvfs = require "horvenfs"
 
 if not fs.exists("test") then
   -- Builds a partition of your entire file system
-  hvfs.buildPartition("test")
+  hvfs.buildPartition("test","test")
   hvfs.mountPartition("test")
   parallel.waitForAny(function()
     hvfs.fs.clone(".","test")

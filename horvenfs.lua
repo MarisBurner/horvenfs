@@ -1,9 +1,12 @@
 -- Horven File System API
 -- Made by Mari
 
+local fs = fs
 local args = { ... }
 local lib = {}
 lib.version = 1
+
+assert(fs, "HorvenFS requires filesystem access!")
 
 local function isRequired()
   local level = 2
